@@ -77,7 +77,7 @@ manifest:
       import: app/west.yml
     - name: zmk-rgbled-widget  # <-- 追加
       url: https://github.com/yawatajunk/zmk-rgbled-widget
-      revision: v0.3           # ZMK のバージョンと合わせること
+      revision: v0.3-branch    # ZMK のバージョンと合わせること
   self:
     path: config
 ```
