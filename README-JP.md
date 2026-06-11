@@ -6,6 +6,9 @@
 このリポジトリは、オリジナルの [caksoylar/zmk-rgbled-widget](https://github.com/caksoylar/zmk-rgbled-widget) のフォークです。
 この環境で使っているのは [yawatajunk/zmk-rgbled-widget](https://github.com/yawatajunk/zmk-rgbled-widget) で、元の機能を維持しつつ、`pwm-leds` を使う基板向けに PWM LED 調光機能を追加しています。
 
+> [!IMPORTANT]
+> このモジュールは、ZMK Firmware v0.3でのみ動作します。
+
 ## フォークとライセンス
 
 - 元プロジェクト: [caksoylar/zmk-rgbled-widget](https://github.com/caksoylar/zmk-rgbled-widget)
@@ -64,11 +67,11 @@ manifest:
   projects:
     - name: zmk
       remote: zmkfirmware
-      revision: v0.3           # 使用している ZMK のバージョン
+      revision: v0.3           # ZMK v0.3のみサポート
       import: app/west.yml
     - name: zmk-rgbled-widget  # <-- 追加するエントリ
       url: https://github.com/yawatajunk/zmk-rgbled-widget
-      revision: v0.3-branch    # ZMK のバージョンと合わせること
+      revision: v0.3-pwm
   self:
     path: config
 ```

@@ -6,6 +6,9 @@ It is used to indicate battery level and BLE connection status in a minimalist w
 This repository is a fork of the original [caksoylar/zmk-rgbled-widget](https://github.com/caksoylar/zmk-rgbled-widget).
 The fork used here is [yawatajunk/zmk-rgbled-widget](https://github.com/yawatajunk/zmk-rgbled-widget), which keeps the original functionality and adds PWM LED dimming support for boards using `pwm-leds`.
 
+> [!IMPORTANT]
+> This supports only ZMK Firmware v0.3.
+
 ## Fork and License
 
 - Original project: [caksoylar/zmk-rgbled-widget](https://github.com/caksoylar/zmk-rgbled-widget)
@@ -64,11 +67,11 @@ manifest:
   projects:
     - name: zmk
       remote: zmkfirmware
-      revision: v0.3           # Your ZMK version
+      revision: v0.3           # support only ZMK v0.3
       import: app/west.yml
     - name: zmk-rgbled-widget  # <-- new entry
       url: https://github.com/yawatajunk/zmk-rgbled-widget
-      revision: v0.3-branch    # MUST match your ZMK version!
+      revision: v0.3-pwm
   self:
     path: config
 ```
