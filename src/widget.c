@@ -3,18 +3,23 @@
 #include <zephyr/drivers/led.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
+#include <string.h>
 
 #include <zmk/battery.h>
+#include <zmk/behavior.h>
 #include <zmk/ble.h>
 #include <zmk/endpoints.h>
 #include <zmk/events/battery_state_changed.h>
 #include <zmk/events/ble_active_profile_changed.h>
 #include <zmk/events/endpoint_changed.h>
 #include <zmk/events/layer_state_changed.h>
+#include <zmk/events/position_state_changed.h>
 #include <zmk/events/split_peripheral_status_changed.h>
 #include <zmk/events/activity_state_changed.h>
 #include <zmk/keymap.h>
 #include <zmk/split/bluetooth/peripheral.h>
+
+#include <dt-bindings/zmk/bt.h>
 
 #if __has_include(<zmk/split/central.h>)
 #include <zmk/split/central.h>
@@ -79,15 +84,9 @@ static const uint8_t layer_color_idx[] = {
 #endif
 
 // log shorthands
-#define LOG_CONN_CENTRAL(index, status, color_label)                                               \
-    LOG_INF("Profile %d %s, blinking %s", index, status,                                           \
-            color_names[CONFIG_RGBLED_WIDGET_CONN_COLOR_##color_label])
-#define LOG_CONN_PERIPHERAL(status, color_label)                                                   \
-    LOG_INF("Peripheral %s, blinking %s", status,                                                  \
-            color_names[CONFIG_RGBLED_WIDGET_CONN_COLOR_##color_label])
-#define LOG_BATTERY(battery_level, color_label)                                                    \
-    LOG_INF("Battery level %d, blinking %s", battery_level,                                        \
-            color_names[CONFIG_RGBLED_WIDGET_BATTERY_COLOR_##color_label])
+#define LOG_CONN_CENTRAL(index, status, color_label) LOG_INF("Profile %d %s, blinking %s", index, status, color_names[CONFIG_RGBLED_WIDGET_CONN_COLOR_##color_label])
+#define LOG_CONN_PERIPHERAL(status, color_label) LOG_INF("Peripheral %s, blinking %s", status, color_names[CONFIG_RGBLED_WIDGET_CONN_COLOR_##color_label])
+#define LOG_BATTERY(battery_level, color_label) LOG_INF("Battery level %d, blinking %s", battery_level, color_names[CONFIG_RGBLED_WIDGET_BATTERY_COLOR_##color_label])
 
 // a blink work item as specified by the color and duration
 struct blink_item {
@@ -195,6 +194,68 @@ ZMK_LISTENER(led_output_listener, led_output_listener_cb);
 #if IS_ENABLED(CONFIG_RGBLED_WIDGET_CONN_SHOW_USB)
 ZMK_SUBSCRIPTION(led_output_listener, zmk_endpoint_changed);
 #endif
+
+#if IS_ENABLED(CONFIG_ZMK_BLE) && DT_HAS_COMPAT_STATUS_OKAY(zmk_behavior_bluetooth)
+#define BT_BEHAVIOR_DEV_NAME DEVICE_DT_NAME(DT_INST(0, zmk_behavior_bluetooth))
+#if DT_HAS_COMPAT_STATUS_OKAY(zmk_behavior_transparent)
+#define TRANS_BEHAVIOR_DEV_NAME DEVICE_DT_NAME(DT_INST(0, zmk_behavior_transparent))
+#endif
+
+static bool get_bt_select_profile_for_position(uint32_t position, uint8_t *profile_index) {
+    for (int layer_idx = ZMK_KEYMAP_LAYERS_LEN - 1; layer_idx >= 0; layer_idx--) {
+        if (!zmk_keymap_layer_active(layer_idx)) {
+            continue;
+        }
+
+        const struct zmk_behavior_binding *binding =
+            zmk_keymap_get_layer_binding_at_idx(layer_idx, position);
+        if (binding == NULL || binding->behavior_dev == NULL) {
+            continue;
+        }
+
+#if DT_HAS_COMPAT_STATUS_OKAY(zmk_behavior_transparent)
+        if (strcmp(binding->behavior_dev, TRANS_BEHAVIOR_DEV_NAME) == 0) {
+            continue;
+        }
+#endif
+
+        if (strcmp(binding->behavior_dev, BT_BEHAVIOR_DEV_NAME) == 0 && binding->param1 == BT_SEL_CMD) {
+            if (profile_index != NULL) {
+                *profile_index = binding->param2;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    return false;
+}
+
+static int led_bt_sel_listener_cb(const zmk_event_t *eh) {
+    if (!initialized) {
+        return 0;
+    }
+
+    const struct zmk_position_state_changed *ev = as_zmk_position_state_changed(eh);
+    if (ev == NULL || !ev->state) {
+        return 0;
+    }
+
+    uint8_t selected_profile;
+    if (get_bt_select_profile_for_position(ev->position, &selected_profile) &&
+        selected_profile == zmk_ble_active_profile_index()) {
+        // Only force an indication for same-profile reselects.
+        // For actual profile changes, rely on zmk_ble_active_profile_changed.
+        indicate_connectivity();
+    }
+
+    return 0;
+}
+
+ZMK_LISTENER(led_bt_sel_listener, led_bt_sel_listener_cb);
+ZMK_SUBSCRIPTION(led_bt_sel_listener, zmk_position_state_changed);
+#endif
 #if IS_ENABLED(CONFIG_ZMK_BLE)
 ZMK_SUBSCRIPTION(led_output_listener, zmk_ble_active_profile_changed);
 #endif // IS_ENABLED(CONFIG_ZMK_BLE)
@@ -226,8 +287,7 @@ void indicate_battery(void) {
     struct blink_item blink = {.duration_ms = CONFIG_RGBLED_WIDGET_BATTERY_BLINK_MS};
     int retry = 0;
 
-#if IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_SELF) ||                                          \
-    IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_PERIPHERALS)
+#if IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_SELF) || IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_PERIPHERALS)
     uint8_t battery_level = zmk_battery_state_of_charge();
     while (battery_level == 0 && retry++ < 10) {
         k_sleep(K_MSEC(100));
@@ -238,8 +298,7 @@ void indicate_battery(void) {
     k_msgq_put(&led_msgq, &blink, K_NO_WAIT);
 #endif
 
-#if IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_PERIPHERALS) ||                                   \
-    IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_ONLY_PERIPHERALS)
+#if IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_PERIPHERALS) || IS_ENABLED(CONFIG_RGBLED_WIDGET_BATTERY_SHOW_ONLY_PERIPHERALS)
     for (uint8_t i = 0; i < ZMK_SPLIT_BLE_PERIPHERAL_COUNT; i++) {
         uint8_t peripheral_level;
 #if __has_include(<zmk/split/central.h>)
