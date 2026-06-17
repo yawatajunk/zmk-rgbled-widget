@@ -70,8 +70,8 @@ manifest:
       revision: v0.3           # ZMK v0.3のみサポート
       import: app/west.yml
     - name: zmk-rgbled-widget  # <-- 追加するエントリ
-      url: https://github.com/yawatajunk/zmk-rgbled-widget
-      revision: v0.3-pwm
+      url: https://github.com/yawatajunk/zmk-rgbled-widget  # フォーク版URL
+      revision: v0.3-pwm-branch  # PWM LEDバージョン
   self:
     path: config
 ```

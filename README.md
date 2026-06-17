@@ -70,8 +70,8 @@ manifest:
       revision: v0.3           # support only ZMK v0.3
       import: app/west.yml
     - name: zmk-rgbled-widget  # <-- new entry
-      url: https://github.com/yawatajunk/zmk-rgbled-widget
-      revision: v0.3-pwm
+      url: https://github.com/yawatajunk/zmk-rgbled-widget  # url for the fork
+      revision: v0.3-pwm-branch  # pwm-leds version
   self:
     path: config
 ```
