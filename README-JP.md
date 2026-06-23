@@ -19,7 +19,7 @@
 
 ## 機能
 
-- `gpio-leds` を使う従来の GPIO ベース RGB LED 構成に対応
+- `gpio-leds` を使う従来の GPIO ベース RGB LED 構成に非対応
 - `pwm-leds` を使う PWM ベース RGB LED 構成に対応
 - `CONFIG_RGBLED_WIDGET_BRIGHTNESS` によるウィジェット輝度設定を追加
 
@@ -78,17 +78,6 @@ manifest:
 
 ローカルビルドを含む詳細は、ZMK の [building with modules](https://zmk.dev/docs/features/modules#building-with-modules) を参照してください。
 
-Xiao BLE など、[`rgbled_adapter`](boards/shields/rgbled_adapter) シールドが対応しているボードを使う場合は、`build.yaml` の `shield` に `rgbled_adapter` を追加します。
-
-```yaml
----
-include:
-  - board: seeeduino_xiao_ble
-    shield: hummingbird rgbled_adapter
-```
-
-その他のキーボードについては、下の [カスタム board/shield への対応追加](#カスタム-boardshield-への対応追加) を参照してください。
-
 ## オンデマンド表示
 
 このモジュールは、バッテリー状態や接続状態を必要なときに表示するための [behavior](https://zmk.dev/docs/keymaps/behaviors) も提供しています。
@@ -113,10 +102,6 @@ include:
 
 対応するキーやコンボを押すと、LED 表示がトリガーされます。
 分割キーボードではすべてのパーツで動作するので、有効化したら全パーツへファームを書き込んでください。
-
-> [!NOTE]
-> 分割キーボードで、すべてのコントローラが widget に対応していない場合でも behavior 自体は使えます。
-> その場合は、`rgbled_adapter` シールド、または `CONFIG_RGBLED_WIDGET` を、有効なパーツだけで使うようにしてください。
 
 ## 分割キーボードでのバッテリー表示
 
@@ -245,39 +230,6 @@ PWM 対応フォークを使う場合、`.conf` での主な明るさ制御は `
 - `10` から `20`: かなり暗い
 - `25` から `40`: 中程度
 - `100`: 最大輝度
-
-## カスタム board/shield への対応追加
-
-この widget を使うには、3 つの LED で構成された RGB LED が必要です。一般的には red / green / blue の 3 色です。
-まず board または shield 側で LED 定義を行い、その後 `aliases` で RGB LED ノードを参照できるようにします。
-
-以下は、nRF52840 で VCC 側に接続された 3 本の GPIO 制御 LED の例です。
-
-```dts
-/ {
-    aliases {
-        led-red = &led0;
-        led-green = &led1;
-        led-blue = &led2;
-    };
-
-    leds {
-        compatible = "gpio-leds";
-        status = "okay";
-        led0: led_0 {
-            gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;  // red LED, connected to P0.26
-        };
-        led1: led_1 {
-            gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;  // green LED, connected to P0.30
-        };
-        led2: led_2 {
-            gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;  // blue LED, connected to P0.06
-        };
-    };
-};
-```
-
-LED が GPIO と GND の間に接続されている場合は、`GPIO_ACTIVE_HIGH` を使ってください。
 
 ### PWM LED 対応
 

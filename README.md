@@ -19,7 +19,7 @@ This fork is distributed under the same MIT license as the original project. Whe
 
 ## Features
 
-- Supports the original GPIO-based RGB LED setup using `gpio-leds`
+- Don't support the original GPIO-based RGB LED setup using `gpio-leds`
 - Supports PWM-based RGB LED setup using `pwm-leds`
 - Adds configurable widget brightness using `CONFIG_RGBLED_WIDGET_BRIGHTNESS`
 
@@ -78,18 +78,6 @@ manifest:
 
 For more information, including instructions for building locally, check out the ZMK docs on [building with modules](https://zmk.dev/docs/features/modules#building-with-modules).
 
-Then, if you are using one of the boards supported by the [`rgbled_adapter`](boards/shields/rgbled_adapter) shield such as Xiao BLE,
-just add the `rgbled_adapter` as an additional shield to your build, e.g. in `build.yaml`:
-
-```yaml build.yaml
----
-include:
-  - board: seeeduino_xiao_ble
-    shield: hummingbird rgbled_adapter
-```
-
-For other keyboards, see the ["Adding support" section](#adding-support-in-custom-boardsshields) below.
-
 ## Showing status on demand
 
 This module also defines keymap [behaviors](https://zmk.dev/docs/keymaps/behaviors) to let you show battery or connection status on demand:
@@ -114,10 +102,6 @@ This module also defines keymap [behaviors](https://zmk.dev/docs/keymaps/behavio
 
 When you invoke the behavior by pressing the corresponding key (or combo), it will trigger the LED color display.
 This will happen on all keyboard parts for split keyboards, so make sure to flash firmware to all parts after enabling.
-
-> [!NOTE]
-> The behaviors can be used even when you use split keyboards with different controllers that don't all support the widget.
-> Make sure that you use the `rgbled_adapter` shield (or enable `CONFIG_RGBLED_WIDGET` if not using the adapter) only for the keyboard parts that support it.
 
 ## Battery levels for splits
 
@@ -248,42 +232,9 @@ When using the PWM-enabled fork, `CONFIG_RGBLED_WIDGET_BRIGHTNESS` is the main b
 - `25` to `40`: moderate brightness
 - `100`: maximum brightness
 
-## Adding support in custom boards/shields
-
-To be able to use this widget, you need three LEDs controlled by GPIOs (_not_ smart LEDs), ideally red, green and blue colors.
-Once you have these LED definitions in your board/shield, simply set the appropriate `aliases` to the RGB LED node labels.
-
-As an example, here is a definition for three LEDs connected to VCC and separate GPIOs for a nRF52840 controller:
-
-```dts
-/ {
-    aliases {
-        led-red = &led0;
-        led-green = &led1;
-        led-blue = &led2;
-    };
-
-    leds {
-        compatible = "gpio-leds";
-        status = "okay";
-        led0: led_0 {
-            gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;  // red LED, connected to P0.26
-        };
-        led1: led_1 {
-            gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;  // green LED, connected to P0.30
-        };
-        led2: led_2 {
-            gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;  // blue LED, connected to P0.06
-        };
-    };
-};
-```
-
-(If the LEDs are wired between GPIO and GND instead, use `GPIO_ACTIVE_HIGH` flag.)
-
 ### PWM LED support
 
-This fork also supports PWM-controlled RGB LEDs through `pwm-leds`.
+This fork supports PWM-controlled RGB LEDs through `pwm-leds`.
 Use this when your board exposes the RGB LED channels through a PWM controller and you want adjustable brightness.
 
 In this setup, the `.conf` file enables the PWM drivers and sets the widget brightness, while the board or shield `.overlay`/`.dtsi` defines the PWM pins and LED nodes.
